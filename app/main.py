@@ -4,7 +4,7 @@ from fastapi_mqtt import FastMQTT, MQTTConfig
 from .ws_connector import ws_connector
 from .enums import Feeds, Home, WsEvent
 from .utils import convert_utc_timestamp
-from .models import Record
+from .models import FloatRecord, IntRecord
 from .db_connector import db
 from bson import ObjectId
 import json
@@ -85,11 +85,19 @@ async def message(client, topic, payload, qos, properties):
     payload = json.loads(payload.decode())
     created_at = convert_utc_timestamp(payload.get("data", {"created_at": ""}).get("created_at"))
     
-    record = Record(
-        id = str(ObjectId()),
-        created_at = created_at,
-        value = int(payload.get("data").get("value", -100)),
-    )
+    record = None
+    if topic in [f"{Feeds.Humid.value}/json", f"{Feeds.Temp.value}/json"]:
+        record = FloatRecord(
+            id = str(ObjectId()),
+            created_at = created_at,
+            value = float(payload.get("data").get("value", "")),
+        )
+    elif topic in [f"{Feeds.Led.value}/json", f"{Feeds.Lumos.value}/json", f"{Feeds.Moved.value}/json"]:
+        record = IntRecord(
+            id = str(ObjectId()),
+            created_at = created_at,
+            value = int(payload.get("data").get("value", "")),
+        )
     
     device = ''
     if topic == f"{Feeds.Humid.value}/json":
